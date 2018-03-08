@@ -1,0 +1,97 @@
+/**************
+ *   GLOBAL   *
+ **************/
+* { padding: 0; margin: 0; }
+html, body {
+    min-height: 100% !important;
+    height: 100%;
+}
+
+/**************
+ *   SIDEBAR  *
+ **************/
+
+.sidenav {
+  height: 100%;
+  top: 0;
+  bottom:0;
+  left: 0;
+  background-color: #fff;
+  color:#444;
+  padding:10px 15px 10px 25px;
+  overflow: scroll;
+  margin: 0;
+  border-right:1px solid #ccc;
+}
+
+.sidenav li {
+  margin:10px 20px;
+}
+
+.sidenav input {
+    color: #fff;
+    background-color:#333;
+    border: 1px solid #333;  
+    height:30px;
+}
+
+.sidenav input:hover {
+    background-color:#444;
+    border: 1px solid #444;
+}
+
+.sidenav a:hover {
+    color: #f1f1f1;
+}
+
+#output, svg{
+	width:100%;
+  height: 100vh;
+}
+
+h3, label {
+	color:#444;
+}
+ 
+label {
+ 	font-size: 10px;
+}
+
+button {
+	background-color:#e74c3c;
+	color:#fff;
+	width:100%;
+}
+
+/******************
+ *  PAGE CONTENT  *
+ ******************/
+
+#main {
+    padding: 20px;  
+}
+
+#waiting {
+    height: 200px;
+    width: 200px;
+    position: fixed;
+    top: 55%;
+    left: 65%;
+    margin-top: -100px;
+    margin-left: -200px;
+    display:none;
+}
+
+ol {
+  padding:0;
+}
+ 
+.alert {
+  display:none;
+}
+
+/* On smaller screens, where height is less than 450px, change the style of the sidenav (less padding and a smaller font size) */
+@media screen and (max-height: 450px) {
+    .sidenav {padding-top: 15px;}
+    .sidenav a {font-size: 18px;}
+}

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+  <head>
+   <meta charset="UTF-8">
+   <title>visualization</title>
+   
+   <link href="{{url_for('static', filename='css/bootstrap.min.css')}}" rel="stylesheet">
+   <link href="{{url_for('static', filename='css/main.css')}}" rel="stylesheet">
+  </head>
+  <body class="row">
+    <ul class="sidenav list-unstyled col-md-3">
+      <li>
+        <h3>VizBlock</h3>
+      </li>
+      <li>
+        <hr>
+        <form id="blockchain_form">
+          <div class="form-group row">
+            <label class="col-2 col-form-label">Test String</label>
+            <div class="col-10">
+              <input class="form-control" type="text" value="B J1 B B S1 B B R1 B" id="test_string">
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="col-2 col-form-label">Epoch</label>
+            <div class="col-10">
+              <input class="form-control" type="number" value="5" id="epoch">
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="col-2 col-form-label">Withdrawal Delay</label>
+            <div class="col-10">
+              <input class="form-control" type="number" value="100" id="withdrawal_delay">
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="col-2 col-form-label">Base Interest Factor</label>
+            <div class="col-10">
+              <input class="form-control" type="number" value="0.02" step="0.01" id="base_interest_factor">
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="col-2 col-form-label">Base Penalty Factor</label>
+            <div class="col-10">
+              <input class="form-control" type="number" value="0.002" step="0.01" id="base_penalty_factor">
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="custom-control custom-radio">
+              <input id="block_version" name="radio" type="radio" class="custom-control-input" value="block" checked>
+              <span class="custom-control-indicator"></span>
+              <span class="custom-control-description">Block</span>
+            </label>
+           <label class="custom-control custom-radio">
+              <input id="epoch_version" name="radio" type="radio" class="custom-control-input" value="epoch">
+              <span class="custom-control-indicator"></span>
+              <span class="custom-control-description">Epoch</span>
+            </label>
+          </div>
+          <div class="form-group row">
+            <br>
+            <div class="col-10">
+              <button type="submit" class="btn"> UPDATE </button>
+            </div>
+          </div>
+        </form>
+        <hr>
+      </li>
+      <li>
+        <strong>Todos:</strong>
+        <ol>
+          <li>show error messages</li>
+          <li>speed it up? somehow</li>
+          <li>mobile friendly</li>
+          <li>show votes</li>
+          <li>lfe and lje edges look ugly ;_;</li>
+          <li>not realtime like viz.js yet bc updating runs blockchain from the very beginning each time so added update button so multiple requests aren't sent on each change</li>
+        </oi>
+      </li>
+    </ul>
+    <div id="main" class="col-md-9">
+        <div class="alert alert-danger">
+          <strong>Uh oh!</strong> Votes won't work yet >:(
+        </div>
+        <div id="output">
+        </div>   
+    </div>
+    <div id="waiting">
+        <div style="width:100%;height:0;padding-bottom:53%;position:relative;"><iframe src="https://giphy.com/embed/3o85xGr7NxBC4eGTte" width="100%" height="100%" style="position:absolute" frameBorder="0" class="giphy-embed" allowFullScreen></iframe></div> 
+    </div>   
+   </body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="{{url_for('static', filename='js/lib/viz.js')}}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.5.0/dist/svg-pan-zoom.min.js"></script>
+  <script>
+    //TODO: Basically clean up everything and move into js files
+    var parser = new DOMParser();
+    var graph = document.querySelector("#output")
+    var gifs = ["https://giphy.com/embed/kpzfYwBT7nUVW", "https://giphy.com/embed/5wWf7H0qoWaNnkZBucU", "https://giphy.com/embed/PWfHC8ogZpWcE", "https://giphy.com/embed/u5eXlkXWkrITm", "https://giphy.com/embed/xf20D8HzvTQzu", "https://giphy.com/embed/o5oLImoQgGsKY", "https://giphy.com/embed/l0HlBO7eyXzSZkJri", "https://giphy.com/embed/l4HnKwiJJaJQB04Zq", "https://giphy.com/embed/J6ctgPvnDpDi0", "https://giphy.com/embed/26gJAzOW1B7EdvWRG", "https://giphy.com/embed/bCwB9W585jiYU", "https://giphy.com/embed/5gUnOrltPvZzW", "https://giphy.com/embed/l2JhpjWPccQhsAMfu", "https://giphy.com/embed/iW8tsoJWcfPc4", "https://giphy.com/embed/ZgqJGwh2tLj5C", "https://giphy.com/embed/3o6YfYvk4uB415sOTm", "https://giphy.com/embed/dT7LBdAZP1Rh6", "https://giphy.com/embed/16e1J9ztaZ3na", "https://giphy.com/embed/HlqvH9JrahLZ6", "https://giphy.com/embed/3o85xGr7NxBC4eGTte"]
+    var lastIdx = 0;
+    draw(); //Start drawing
+
+    $("#blockchain_form").submit(function(e){
+      //Grab form data
+      e.preventDefault();
+
+      draw()
+    });
+
+    function draw(){
+      $(".alert").hide()
+      grabGraphviz().then((dot) => {
+        var svg = document.querySelector("svg");
+        if (svg) {
+          graph.removeChild(svg)
+        }
+        updateGraph(dot)
+      }).catch((err) => {
+        $(".alert").show()
+      });
+    }
+
+    function updateGraph(dot){
+      var test_string = dot
+      var result = Viz(test_string);
+    
+      var svg = parser.parseFromString(result, "image/svg+xml").documentElement;
+
+      graph.appendChild(svg);
+      panZoom = svgPanZoom(svg, {
+          zoomEnabled: true,
+          controlIconsEnabled: true,
+          fit: true,
+          center: true,
+          minZoom: 0.1
+        });
+
+      svg.addEventListener('paneresize', function(e) {
+        panZoom.resize();
+      }, false);
+      window.addEventListener('resize', function(e) {
+        panZoom.resize();
+      });
+    }
+
+    function grabGraphviz(){
+      startGif()
+      //TODO: Change api 
+      return fetch('http://0.0.0.0:8080/api/v1.0/draw', {
+          method: 'POST',
+          body: JSON.stringify({
+            test_string: $("#test_string").val().trim(),
+            epoch: $("#epoch").val(),
+            withdrawal_delay: $("#withdrawal_delay").val(),
+            base_interest_factor: $("#base_interest_factor").val(),
+            base_penalty_factor: $("#base_penalty_factor").val(),
+            type: $("#blockchain_form input[type='radio']:checked").val()
+          })
+        })
+        .then((resp) => resp.json())
+        .then((data) => {
+          $("#waiting").hide()
+          return data.output
+        })
+    }
+
+    function startGif(){
+      var randomIdx = Math.floor(Math.random() * gifs.length)
+
+      if(randomIdx == lastIdx){
+        randomIdx = (randomIdx + 1) % gifs.length
+      }
+      randomGif = gifs[randomIdx];
+      $("iframe").attr("src",randomGif);
+      $("#waiting").fadeIn(2000)
+      lastIdx = randomIdx
+    }
+
+  </script>
+</html>
