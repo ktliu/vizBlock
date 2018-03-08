@@ -5,7 +5,7 @@
 
 
 ## Example
-
+![image](https://github.com/ktliu/vizBlock/blob/master/example.png)
 
 
 ## TODOS
