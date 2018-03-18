@@ -66,27 +66,17 @@
         </form>
         <hr>
       </li>
-      <li>
-        <strong>Todos:</strong>
-        <ol>
-          <li>show error messages</li>
-          <li>speed it up? somehow</li>
-          <li>mobile friendly</li>
-          <li>show votes</li>
-          <li>lfe and lje edges look ugly ;_;</li>
-          <li>not realtime like viz.js yet bc updating runs blockchain from the very beginning each time so added update button so multiple requests aren't sent on each change</li>
-        </oi>
-      </li>
     </ul>
     <div id="main" class="col-md-9">
         <div class="alert alert-danger">
-          <strong>Uh oh!</strong> Votes won't work yet >:(
+          <strong>Uh oh!</strong> Check that your test string is valid (validator exists/validator can start mining)
         </div>
         <div id="output">
         </div>   
     </div>
     <div id="waiting">
         <div style="width:100%;height:0;padding-bottom:53%;position:relative;"><iframe src="https://giphy.com/embed/3o85xGr7NxBC4eGTte" width="100%" height="100%" style="position:absolute" frameBorder="0" class="giphy-embed" allowFullScreen></iframe></div> 
+        <p> This might take a while - running the blockchain </p>
     </div>   
    </body>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
@@ -116,16 +106,16 @@
         }
         updateGraph(dot)
       }).catch((err) => {
+        console.log(err)
         $(".alert").show()
       });
     }
 
     function updateGraph(dot){
       var test_string = dot
-      var result = Viz(test_string);
+      var result = Viz(test_string, "svg");
     
       var svg = parser.parseFromString(result, "image/svg+xml").documentElement;
-
       graph.appendChild(svg);
       panZoom = svgPanZoom(svg, {
           zoomEnabled: true,
@@ -145,11 +135,12 @@
 
     function grabGraphviz(){
       startGif()
+
       //TODO: Change api 
       return fetch('http://0.0.0.0:8080/api/v1.0/draw', {
           method: 'POST',
           body: JSON.stringify({
-            test_string: $("#test_string").val().trim(),
+            test_string: $("#test_string").val().replace(/ +(?= )/g,'').trim(),
             epoch: $("#epoch").val(),
             withdrawal_delay: $("#withdrawal_delay").val(),
             base_interest_factor: $("#base_interest_factor").val(),
@@ -175,6 +166,5 @@
       $("#waiting").fadeIn(2000)
       lastIdx = randomIdx
     }
-
   </script>
 </html>
