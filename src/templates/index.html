@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
   <head>
@@ -6,6 +7,9 @@
    
    <link href="{{url_for('static', filename='css/bootstrap.min.css')}}" rel="stylesheet">
    <link href="{{url_for('static', filename='css/main.css')}}" rel="stylesheet">
+   <link href="{{url_for('static', filename='css/main.css')}}" rel="stylesheet">
+
+    
   </head>
   <body class="row">
     <ul class="sidenav list-unstyled col-md-3">
@@ -14,6 +18,11 @@
       </li>
       <li>
         <hr>
+        <select class="form-control" id="chart-select" >
+          <option>Blockchain</option>
+          <option>Charts</option>
+        </select>
+        <br>
         <form id="blockchain_form">
           <div class="form-group row">
             <label class="col-2 col-form-label">Test String</label>
@@ -67,12 +76,38 @@
         <hr>
       </li>
     </ul>
-    <div id="main" class="col-md-9">
-        <div class="alert alert-danger">
-          <strong>Uh oh!</strong> Check that your test string is valid (validator exists/validator can start mining)
-        </div>
-        <div id="output">
-        </div>   
+    <div id="body" class="col-md-9">
+        <div id="main">
+          <div class="alert alert-danger">
+            <strong>Uh oh!</strong> Check that your test string is valid (validator exists/validator can start mining)
+          </div>
+          <div id="icon-display">
+            <span id="icon-bars" class="icon" ><i class="fas fa-bars"></i></span>
+            <span id="icon-columns" class="icon" ><i class="fas fa-columns"></i></span>
+          </div>
+          <div id="main">
+              <div id="output"> 
+              </div> 
+              <div id="chart">
+                <div id="Validator_Login_History">
+                </div>
+                <div id="Validator_Vote_History">
+                </div>
+                <div id="Validator_Deposit_History">
+                </div>
+                <div id="Current_vs_Last_Finalized_Epoch">
+                </div>
+                <div id="Total_Deposits">
+                </div>
+                <div id="Deposit_Scale_Factor">
+                </div>
+                <div id="Last_Voter_NonVoter_Rescale">
+                </div>
+                <div id="Casper_Contract_Account_Storage_Usage">
+                </div>
+              </div>
+           </div>
+        </div>  
     </div>
     <div id="waiting">
         <div style="width:100%;height:0;padding-bottom:53%;position:relative;"><iframe src="https://giphy.com/embed/3o85xGr7NxBC4eGTte" width="100%" height="100%" style="position:absolute" frameBorder="0" class="giphy-embed" allowFullScreen></iframe></div> 
@@ -82,41 +117,71 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
   <script src="{{url_for('static', filename='js/lib/viz.js')}}"></script>
   <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.5.0/dist/svg-pan-zoom.min.js"></script>
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="https://code.highcharts.com/modules/xrange.js"></script>
+  <script defer src="https://use.fontawesome.com/releases/v5.0.9/js/all.js" integrity="sha384-8iPTk2s/jMVj81dnzb/iFR2sdA7u06vHJyyLlAd4snFpCl/SnyUjRrbdJsw1pGIl" crossorigin="anonymous"></script>
+
+
   <script>
+
     //TODO: Basically clean up everything and move into js files
     var parser = new DOMParser();
-    var graph = document.querySelector("#output")
+    var graph = $("#output")
+    var info = {}
     var gifs = ["https://giphy.com/embed/kpzfYwBT7nUVW", "https://giphy.com/embed/5wWf7H0qoWaNnkZBucU", "https://giphy.com/embed/PWfHC8ogZpWcE", "https://giphy.com/embed/u5eXlkXWkrITm", "https://giphy.com/embed/xf20D8HzvTQzu", "https://giphy.com/embed/o5oLImoQgGsKY", "https://giphy.com/embed/l0HlBO7eyXzSZkJri", "https://giphy.com/embed/l4HnKwiJJaJQB04Zq", "https://giphy.com/embed/J6ctgPvnDpDi0", "https://giphy.com/embed/26gJAzOW1B7EdvWRG", "https://giphy.com/embed/bCwB9W585jiYU", "https://giphy.com/embed/5gUnOrltPvZzW", "https://giphy.com/embed/l2JhpjWPccQhsAMfu", "https://giphy.com/embed/iW8tsoJWcfPc4", "https://giphy.com/embed/ZgqJGwh2tLj5C", "https://giphy.com/embed/3o6YfYvk4uB415sOTm", "https://giphy.com/embed/dT7LBdAZP1Rh6", "https://giphy.com/embed/16e1J9ztaZ3na", "https://giphy.com/embed/HlqvH9JrahLZ6", "https://giphy.com/embed/3o85xGr7NxBC4eGTte"]
     var lastIdx = 0;
+    
     draw(); //Start drawing
 
+    //Listen to form submission
     $("#blockchain_form").submit(function(e){
-      //Grab form data
       e.preventDefault();
-
       draw()
     });
 
-    function draw(){
-      $(".alert").hide()
-      grabGraphviz().then((dot) => {
-        var svg = document.querySelector("svg");
-        if (svg) {
-          graph.removeChild(svg)
-        }
-        updateGraph(dot)
+    //Listen to Select (change in chart)
+    $("#chart-select").change(function(){
+      
+      let type = $("#chart-select option:selected").text();
+      console.log(type)
+      if(type == 'Blockchain')
+      {
+        $("#output").show()
+        $("#chart").hide()
+        drawBlockchain()
+      }
+      else
+      {
+        $("#output").hide()
+        $("#chart").show()
+        changeChartLayout()
+      }
+    })
+
+    function draw()
+    {
+      $(".alert").hide() //Hide any previous error messages
+      $("#output").show()
+      $("#chart").hide()
+      //Send a request to the server to grab data
+      grabChartData().then((data) => {
+        info = data;
+        //Reset  
+        graph.empty();
+        drawBlockchain(info.blockchain) 
       }).catch((err) => {
         console.log(err)
         $(".alert").show()
       });
     }
 
-    function updateGraph(dot){
+    function drawBlockchain(dot)
+    {
       var test_string = dot
       var result = Viz(test_string, "svg");
     
       var svg = parser.parseFromString(result, "image/svg+xml").documentElement;
-      graph.appendChild(svg);
+      graph.append(svg);
       panZoom = svgPanZoom(svg, {
           zoomEnabled: true,
           controlIconsEnabled: true,
@@ -133,11 +198,12 @@
       });
     }
 
-    function grabGraphviz(){
+    function grabChartData()
+    {
       startGif()
 
       //TODO: Change api 
-      return fetch('http://0.0.0.0:8080/api/v1.0/draw', {
+      return fetch('http://localhost:8000/api/v1.0/draw', {
           method: 'POST',
           body: JSON.stringify({
             test_string: $("#test_string").val().replace(/ +(?= )/g,'').trim(),
@@ -151,11 +217,13 @@
         .then((resp) => resp.json())
         .then((data) => {
           $("#waiting").hide()
+          
           return data.output
         })
     }
 
-    function startGif(){
+    function startGif()
+    {
       var randomIdx = Math.floor(Math.random() * gifs.length)
 
       if(randomIdx == lastIdx){
@@ -166,5 +234,362 @@
       $("#waiting").fadeIn(2000)
       lastIdx = randomIdx
     }
+
+    function drawChart(type)
+    {
+      if(type == 'Blockchain')
+      {
+        drawBlockchain(info['blockchain']);
+        return
+      }
+      // Use highchart
+      // Format the data for highchart
+      let data = formatData(type);
+      let id = type.replace(/ /g, "_");
+      
+      if(type == 'Validator Vote History')
+      {
+        
+        new Highcharts.Chart({
+          chart: {
+              renderTo: id,
+              type: 'line',
+          },
+          title: {
+              text: "Validator Votes"
+          },
+          plotOptions: {
+              series: {
+                  lineWidth: 0,
+                  lineColor: 'transparent'
+              }
+          },
+          xAxis: {
+              title: {
+                text: 'block height (block hash)'
+              },
+              categories: data ? data['xAxis_data'] : []
+          }, 
+          yAxis: {
+              title: {
+                  text: data ? data['yAxis_title'] : ""
+              },
+              tickInterval: 1
+          },
+          series:  data ? data['yAxis_data'] : ['0']
+        });  
+      }
+      else if(type == 'Validator Login History')
+      {
+
+        new Highcharts.Chart({
+            chart: {
+              renderTo: id,
+                type: 'xrange' 
+            },
+            title: {
+                text: 'Validator Login History'
+            },
+            subtitle: {
+                text: "Note: Currently can't log out in testing lang"
+            },
+            xAxis: {
+                title: {
+                  text: "epoch"
+                },
+                categories: data['xAxis_data']
+            },
+            yAxis: {
+                title: {
+                    text: 'validator index'
+                },
+                categories: data['xAxis_data'],
+                reversed: true,
+            },
+            series: [{
+                name: "epoch",
+                pointWidth: 20,
+                data: data['yAxis_data'],
+                dataLabels: {
+                    enabled: true
+                }
+            }]
+        });
+      }
+      else if(type == 'Validator Deposit History')
+      {  
+         new Highcharts.Chart({
+           chart: {
+              renderTo: id,
+                  type: 'area'
+              },
+              title: {
+                  text: 'Validator Deposit History'
+              },
+              xAxis: {
+                  title: {
+                    text: 'epoch'
+                  },
+                  categories: data['xAxis_data']
+              },
+              yAxis: {
+                  title: {
+                      text: 'validator deposits'
+                  }
+              },
+              series: data['yAxis_data']
+          });
+        
+      }
+      else
+      {
+        new Highcharts.Chart( {
+            chart: {
+              renderTo: id,
+                type: 'line'
+            },
+            title: {
+                text: type
+            },
+            xAxis: {
+                title: {
+                  text: 'timestamp'
+                },
+                categories: data['xAxis_data']
+            },
+            yAxis: {
+                title: {
+                    text: data['yAxis_title']
+                }
+            },
+            series: data['yAxis_data']
+        });
+      }
+    }
+    //B J1 J2 B B S1 B V1 V2  B R1 V1 V2 B V1
+    //B J1 J2 B B S1 B V1 V2 B R1 V1 V2 B V1 B B 
+    //TODO: redo to make it cleaner / more structured
+    function formatData(type)
+    {
+      
+      var xAxis, data;
+      var series = [];
+      var yAxis_title = '';
+
+      if(type == 'Validator Vote History')
+      {
+        if(!('vote' in info['history'])) return
+
+        data = info['history']['vote']; 
+        xAxis = []
+        for(var block_num in data)
+        {
+          for(var hash in data[block_num])
+          {
+              xAxis.push(block_num.toString() + " (" + hash.toString() + ")")
+          }
+        } 
+      }
+      else
+      {
+        data = info['epoch_info'];
+
+        if(type == 'Validator Login History' || type == "Validator Deposit History")
+        {
+           var num_validators = 0;
+           for(var epoch in data)
+           {
+              var epoch_info = data[epoch];
+              if( !epoch_info ) continue;
+
+              var curr_num_validators = epoch_info.validators.length;
+              if(curr_num_validators > num_validators)
+              {
+                  num_validators = curr_num_validators;
+              }
+           }
+           xAxis = Array(num_validators).fill(1).map((x, y) => x + y) // range in python
+        }
+        else
+        {
+           data = info['epoch_info']
+           xAxis_key = Object.keys(data).sort((a,b)=>{
+            return data[a].timestamp - data[b].timestamp;
+           });
+         
+           xAxis = xAxis_key.map((epoch)=>{
+              var date = new Date(data[epoch].timestamp * 1000)
+              return date.toLocaleString()
+           })
+        } 
+      }
+     
+      //TODO: don't hardcode chart names
+      switch(type)
+      {
+        case 'Validator Vote History':
+          yAxis_title = 'validator index'
+
+          //TODO: clean up - this is fugly
+          validators = []
+
+          Object.keys(data).forEach((block_num)=>{
+              for(var hash in data[block_num])
+              { //Loop through blocks at blocknum
+                  for(var v_idx in data[block_num][hash])
+                  { 
+                      // Validators who voted in this block
+                      //Check if validator already exists
+                      var validator_num = data[block_num][hash][v_idx];
+                      if(!validators[validator_num])
+                      {
+                          validators[validator_num] = {name: validator_num, data: new Array(xAxis.length).fill(null), lineWidth: 0, lineColor: 'transparent'}
+                      }
+                      //Get index of block in xAxis
+                      let name = block_num.toString() + " (" + hash.toString() + ")";
+                    
+                      let xAxis_idx = xAxis.indexOf(name);
+              
+                      validators[validator_num].data[xAxis_idx] = validator_num;
+                  }
+              }
+          })
+
+          validators.forEach((voter)=>{
+              series.push(voter);
+          })
+          break
+
+        case 'Validator Login History':
+     
+          yAxis_title = 'validator index'
+          data = info['epoch_info'];
+          validators = []
+          //TODO: validator can log out / log back in - need to handle this
+          //Loop through each epoch
+          for(var epoch in data)
+          {
+             epoch_info = data[epoch];
+             if( !epoch_info ) continue;
+
+             if(epoch_info.validators.length == 0) continue
+
+             //Grab start and end dynasty
+             epoch_info.validators.forEach((validator)=>{
+
+                var start_dyn = validator['start_dynasty'];
+                var end_dyn = validator['end_dynasty'] == 1e+30 ? Object.keys(data).length: validator['end_dynasty'];
+                var v_idx = epoch_info.validators.indexOf(validator)
+                validators[v_idx] = {x: start_dyn, x2: end_dyn, y: v_idx}
+             })
+          }
+
+          validators.forEach((voter)=>{
+              series.push(voter);
+          })
+
+          break
+        case 'Validator Deposit History':
+          yAxis_title = 'validator index'
+          data = info['epoch_info'];
+          validators = []
+          //TODO: validator can log out / log back in - need to handle this
+          //Loop through each epoch
+          for(var epoch in data)
+          {
+
+             epoch_info = data[epoch];
+             if( !epoch_info ) continue
+             if( epoch_info.validators.length == 0 ) continue
+
+             //Grab start and end dynasty
+             epoch_info.validators.forEach((validator)=>{
+
+                var deposit = validator['deposit'];
+                
+                var v_idx = epoch_info.validators.indexOf(validator)
+                 
+                if(!(v_idx in validators))
+                {
+                    validators[v_idx] = { name: v_idx.toString(), data: [] }
+                }
+                validators[v_idx]['data'].push(deposit)
+             })
+          }
+
+          validators.forEach((voter)=>{
+              series.push(voter);
+          })
+
+          break
+        case 'Current vs Last Finalized Epoch':
+          yAxis_title = 'epoch'
+          let lfe = grabDataFromEpoch(data, (epoch)=>{return data[epoch]['lfe'];})
+          let lje = grabDataFromEpoch(data, (epoch)=>{return data[epoch]['lje'];})
+
+          series.push({name: 'lje', data: lje});
+          series.push({name: 'lfe', data: lfe});
+          break
+        case 'Total Deposits':
+          yAxis_title = 'current deposits'
+          let cur_deposits = grabDataFromEpoch(data, (epoch)=>{return data[epoch]['votes']['cur_deposits'];})
+          series.push({name: 'current deposits', data: cur_deposits});
+          break
+        case 'Deposit Scale Factor':
+          yAxis_title = 'deposit scale factor'
+          let deposit_scale_factor = grabDataFromEpoch(data, (epoch)=>{return data[epoch]['deposit_scale_factor'];})
+          series.push({name: 'deposit scale factor', data: deposit_scale_factor});
+          break
+        case 'Last Voter/Non-Voter Rescale':
+          yAxis_title = 'last voter/nonvoter rescale'
+          let last_voter_rescale = grabDataFromEpoch(data, (epoch)=>{return data[epoch]['votes']['last_voter_rescale'];})
+          let last_nonvoter_rescale = grabDataFromEpoch(data, (epoch)=>{return data[epoch]['votes']['last_nonvoter_rescale'];})
+          series.push({name: 'last voter rescale', data: last_voter_rescale});
+          series.push({name: 'last nonvoter rescale', data: last_nonvoter_rescale});
+          break;
+        case 'Casper Contract Account Storage Usage':
+          yAxis_title = 'storage'
+          let storage = grabDataFromEpoch(data, (epoch)=>{return data[epoch]['storage'];})
+          
+          series.push({name: 'storage', data: storage});
+          break;
+      }
+      
+      return {'xAxis_data': xAxis, 'yAxis_data': series, 'yAxis_title': yAxis_title};
+    }
+
+    function grabDataFromEpoch(info, fn)
+    {
+       return Object.keys(info).map(fn);
+    }
+
+    $("#icon-columns").click(()=>{
+      changeChartLayout({'width':'45%', 'display':'inline-block'})
+    })
+
+    $("#icon-bars").click(()=>{
+      changeChartLayout({'width':'100%', 'display':'block'})
+    })
+
+    function changeChartLayout(css_dict)
+    {
+      let charts = Array.from($("#chart").children())
+ 
+      charts.forEach((c)=>{
+        console.log($("#chart").children())
+        let id = c.id
+        $('#' + id).remove()
+        createChartElement(id, css_dict)
+      })
+    }
+
+    function createChartElement(id, css_dict){
+      let d = $('<div/>', {'id': id})
+      if(css_dict) d.css(css_dict)
+      let type = id.replace(/_/g, ' ')
+      $("#chart").append(d)
+      drawChart(type)
+    }
+
   </script>
 </html>
