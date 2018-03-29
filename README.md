@@ -8,7 +8,7 @@
 
 
 ## Example
-![image](https://github.com/ktliu/vizBlock/blob/master/example.png)
+![image](https://github.com/ktliu/vizBlock/blob/master/chart.png)
 
  
 
